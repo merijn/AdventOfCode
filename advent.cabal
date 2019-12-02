@@ -26,3 +26,4 @@ executable Day1
 executable Day2
   import:               all
   main-is:              Day2.hs
+  build-depends:        vector ^>= 0.12.0.3
