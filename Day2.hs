@@ -23,15 +23,11 @@ toOpcodes = fmap V.fromList . mapM toDecimal . T.split (==',') . T.stripEnd
             | T.null remainder -> Right t
             | otherwise -> Left "Parse error!"
 
-patchComputer :: STVector s Int -> ST s ()
-patchComputer vec = do
-    V.unsafeWrite vec 1 12
-    V.unsafeWrite vec 2 2
-
 runIntcode :: forall s . Vector Int -> ST s (Either String Int)
 runIntcode frozenIntcodes = do
-    intcodes <- V.unsafeThaw frozenIntcodes
-    patchComputer intcodes
+    intcodes <- V.thaw frozenIntcodes
+    V.unsafeWrite intcodes 1 12
+    V.unsafeWrite intcodes 2 2
     stepComputer 0 intcodes
   where
     stepComputer :: Int -> STVector s Int -> ST s (Either String Int)
