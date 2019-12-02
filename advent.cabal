@@ -12,11 +12,17 @@ maintainer:          merijn@inconsistent.nl
 -- category:
 extra-source-files:  CHANGELOG.md
 
-executable Day1
+common all
   default-language:     Haskell2010
   ghc-options:          -Wall
-  main-is:              Day1.hs
-  -- other-modules:
-  -- other-extensions:
+
   build-depends:        base ^>= 4.12.0.0,
                         text ^>= 1.2.4.0
+
+executable Day1
+  import:               all
+  main-is:              Day1.hs
+
+executable Day2
+  import:               all
+  main-is:              Day2.hs
