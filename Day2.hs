@@ -23,14 +23,15 @@ toOpcodes = fmap V.fromList . mapM toDecimal . T.split (==',') . T.stripEnd
             | T.null remainder -> Right t
             | otherwise -> Left "Parse error!"
 
-runIntcode :: forall s . Vector Int -> ST s (Either String Int)
-runIntcode frozenIntcodes = do
+runIntcode :: Vector Int -> Either String Int
+runIntcode frozenIntcodes = runST $ do
     intcodes <- V.thaw frozenIntcodes
     V.unsafeWrite intcodes 1 12
     V.unsafeWrite intcodes 2 2
     stepComputer 0 intcodes
   where
-    stepComputer :: Int -> STVector s Int -> ST s (Either String Int)
+    stepComputer
+        :: forall s . Int -> STVector s Int -> ST s (Either String Int)
     stepComputer n vec = do
         opcode <- V.unsafeRead vec n
         case opcode of
@@ -53,8 +54,6 @@ main = do
         [inputFile] -> T.readFile inputFile
         _ -> putStrLn "No input file!" >> exitFailure
 
-    case toOpcodes inputData of
+    case toOpcodes inputData >>= runIntcode of
         Left err -> putStrLn err >> exitFailure
-        Right intcodes -> case runST (runIntcode intcodes) of
-            Left err -> putStrLn err >> exitFailure
-            Right result -> print result
+        Right result -> print result
