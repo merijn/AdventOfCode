@@ -1,9 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import Control.Monad.State (State, evalState, get, modify, put)
+import Data.Bifunctor (bimap)
 import Data.Foldable (asum)
-import Data.Set (Set)
-import qualified Data.Set as S
+import Data.List (sortOn)
+import Data.Map (Map)
+import qualified Data.Map as M
+import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text.IO as T
 import Data.Void (Void)
@@ -39,7 +42,7 @@ instance Ord Point where
       where
         distanceComparison = compare (manhattan origin p1) (manhattan origin p2)
 
-type Parser = ParsecT Void Text (State Point)
+type Parser = ParsecT Void Text (State (Int, Point))
 
 direction :: Parser Dir
 direction = asum
@@ -49,27 +52,27 @@ direction = asum
     , R <$ char 'R'
     ]
 
-lineSegment :: Parser (Set Point)
+lineSegment :: Parser (Map Point Int)
 lineSegment = do
-    Point x y <- get
+    (len, Point x y) <- get
     dir <- direction
     distance <- decimal
-    modify (offset dir distance)
-    return . S.fromList $ case dir of
-        D -> map (\i -> Point x (y - i)) [1 .. distance]
-        L -> map (\i -> Point (x -i) y) [1 .. distance]
-        U -> map (\i -> Point x (y + i)) [1 .. distance]
-        R -> map (\i -> Point (x + i) y) [1 .. distance]
+    modify $ bimap (+distance) (offset dir distance)
+    return . M.fromList $ case dir of
+        D -> map (\i -> (Point x (y - i), len + i)) [1 .. distance]
+        L -> map (\i -> (Point (x - i) y, len + i)) [1 .. distance]
+        U -> map (\i -> (Point x (y + i), len + i)) [1 .. distance]
+        R -> map (\i -> (Point (x + i) y, len + i)) [1 .. distance]
 
-line :: Parser (Set Point)
+line :: Parser (Map Point Int)
 line = do
-    put origin
-    S.unions <$> sepBy lineSegment (char ',')
+    put (0, origin)
+    M.unions <$> sepBy lineSegment (char ',')
 
 runParser :: FilePath -> Parser a -> IO a
 runParser inputFile parser = do
     inputTxt <- T.readFile inputFile
-    case evalState (runParserT parser inputFile inputTxt) origin of
+    case evalState (runParserT parser inputFile inputTxt) (0, origin) of
         Left e -> putStrLn (errorBundlePretty e) >> exitFailure
         Right r -> return r
 
@@ -82,8 +85,16 @@ main = do
 
     (line1, line2) <- runParser inputFile $ (,) <$> line <* eol <*> line
 
-    case S.lookupMin (S.intersection line1 line2) of
+    let lineIntersections = M.intersectionWith (+) line1 line2
+    case M.lookupMin lineIntersections of
         Nothing -> putStrLn "No intersections!" >> exitFailure
-        Just p -> do
+        Just (p, _) -> do
             putStrLn $ "Closest intersection: " ++ show p
             putStrLn $ "Manhattan distance: " ++ show (manhattan origin p)
+
+    case listToMaybe (sortOn snd (M.toList lineIntersections)) of
+        Nothing -> putStrLn "No intersections!" >> exitFailure
+        Just (p, n) -> do
+            putStrLn $ "Intersection: " ++ show p
+            putStrLn $ "Total line length: " ++ show n
+
