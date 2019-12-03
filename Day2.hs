@@ -2,6 +2,10 @@
 module Main(main) where
 
 import Control.Monad.ST (ST, runST)
+import Data.Bifunctor (first)
+import Data.Either.Validation
+    (Validation, eitherToValidation, validationToEither)
+import Data.Foldable (asum)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -23,8 +27,8 @@ toOpcodes = fmap V.fromList . mapM toDecimal . T.split (==',') . T.stripEnd
             | T.null remainder -> Right t
             | otherwise -> Left "Parse error!"
 
-runIntcode :: Vector Int -> Either String Int
-runIntcode frozenIntcodes = runST $ do
+runIntcode :: Vector Int -> Int -> Int -> Either String Int
+runIntcode frozenIntcodes noun verb = runST $ do
     intcodes <- V.thaw frozenIntcodes
     V.write intcodes 1 12
     V.write intcodes 2 2
@@ -47,6 +51,21 @@ runIntcode frozenIntcodes = runST $ do
             outputIdx <- V.read vec (n + 3)
             V.write vec outputIdx (f input1 input2)
 
+reportError :: Either String a -> IO a
+reportError result =  case result of
+    Left err -> putStrLn err >> exitFailure
+    Right r -> return r
+
+mapFirstSuccess
+    :: forall a b e . ([e] -> e) -> [a] -> (a -> Either e b) -> Either e b
+mapFirstSuccess combineErrors l f = getResult . asum . map tryF $ l
+  where
+    tryF :: a -> Validation [e] b
+    tryF = eitherToValidation . first pure . f
+
+    getResult :: Validation [e] b -> Either e b
+    getResult = first combineErrors . validationToEither
+
 main :: IO ()
 main = do
     args <- getArgs
@@ -54,6 +73,19 @@ main = do
         [inputFile] -> T.readFile inputFile
         _ -> putStrLn "No input file!" >> exitFailure
 
-    case toOpcodes inputData >>= runIntcode of
-        Left err -> putStrLn err >> exitFailure
-        Right result -> print result
+    (puzzle1, puzzle2) <- reportError $ do
+        intcodes <- toOpcodes inputData
+        result1 <- runIntcode intcodes 12 2
+        result2 <- mapFirstSuccess unlines nounVerbPairs $ \(noun, verb) -> do
+            result <- runIntcode intcodes noun verb
+            if result == 19690720
+               then Right (100 * noun + verb)
+               else Left $ mconcat
+                        [ "Incorrect solution for noun "
+                        , show noun, " and verb ", show verb
+                        ]
+        return (result1, result2)
+    print puzzle1
+    print puzzle2
+  where
+    nounVerbPairs = [(noun,verb) | noun <- [0..99], verb <- [0..99]]
