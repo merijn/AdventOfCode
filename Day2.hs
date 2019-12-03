@@ -26,26 +26,26 @@ toOpcodes = fmap V.fromList . mapM toDecimal . T.split (==',') . T.stripEnd
 runIntcode :: Vector Int -> Either String Int
 runIntcode frozenIntcodes = runST $ do
     intcodes <- V.thaw frozenIntcodes
-    V.unsafeWrite intcodes 1 12
-    V.unsafeWrite intcodes 2 2
+    V.write intcodes 1 12
+    V.write intcodes 2 2
     stepComputer 0 intcodes
   where
     stepComputer
         :: forall s . Int -> STVector s Int -> ST s (Either String Int)
     stepComputer n vec = do
-        opcode <- V.unsafeRead vec n
+        opcode <- V.read vec n
         case opcode of
             1 -> performOp (+) >> stepComputer (n + 4) vec
             2 -> performOp (*) >> stepComputer (n + 4) vec
-            99 -> Right <$> V.unsafeRead vec 0
+            99 -> Right <$> V.read vec 0
             i -> return . Left $ "Unknown opcode: " ++ show i
       where
         performOp :: (Int -> Int -> Int) -> ST s ()
         performOp f = do
-            input1 <- V.unsafeRead vec (n + 1) >>= V.unsafeRead vec
-            input2 <- V.unsafeRead vec (n + 2) >>= V.unsafeRead vec
-            outputIdx <- V.unsafeRead vec (n + 3)
-            V.unsafeWrite vec outputIdx (f input1 input2)
+            input1 <- V.read vec (n + 1) >>= V.read vec
+            input2 <- V.read vec (n + 2) >>= V.read vec
+            outputIdx <- V.read vec (n + 3)
+            V.write vec outputIdx (f input1 input2)
 
 main :: IO ()
 main = do
