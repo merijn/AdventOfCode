@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+module Main(main) where
 
 import Control.Monad.State (State, evalState, get, modify, put)
 import Data.Bifunctor (bimap)
