@@ -39,4 +39,4 @@ executable Day3
 executable Day4
   import:               all
   main-is:              Day4.hs
-  build-depends:        
+  build-depends:        containers ^>= 0.6.2.1

@@ -1,5 +1,7 @@
+{-# LANGUAGE TupleSections #-}
 import Data.List (scanl')
-import Data.Either (rights)
+import Data.IntMap (IntMap)
+import qualified Data.IntMap.Strict as IM
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 
@@ -15,11 +17,20 @@ simplifyLower (i:is) = map fst $ scanl' go (i, False) is
     go (x, False) n | x <= n = (n, False)
     go (x, _) _ = (x, True)
 
-generate :: [Int] -> [Int] -> [[Int]]
-generate lowerbound upperbound = rights $ go lowerbound upperbound
+digitCounts :: [Int] -> IntMap Int
+digitCounts = IM.fromListWith (+) . map (,1)
+
+puzzle1Criteria :: [Int] -> Bool
+puzzle1Criteria = any (>=2) . IM.elems . digitCounts
+
+puzzle2Criteria :: [Int] -> Bool
+puzzle2Criteria = any (==2) . IM.elems . digitCounts
+
+generate :: ([Int] -> Bool) -> [Int] -> [Int] -> [[Int]]
+generate f lowerbound upperbound = filter f $ go lowerbound upperbound
   where
-    go :: [Int] -> [Int] -> [Either [Int] [Int]]
-    go [] [] = [Left []]
+    go :: [Int] -> [Int] -> [[Int]]
+    go [] [] = [[]]
     go (lb:lbs) (ub:ubs)  = do
         n <- [lb .. ub]
 
@@ -30,10 +41,7 @@ generate lowerbound upperbound = rights $ go lowerbound upperbound
                         | otherwise = map (const 9)
 
         rest <- go (updateLower lbs) (updateUpper ubs)
-        return $ case rest of
-            Left l@(h:_) | h == n -> Right (n:l)
-            Left l -> Left (n:l)
-            Right l -> Right (n:l)
+        return (n:rest)
 
     go _ _ = []
 
@@ -51,4 +59,5 @@ main = do
     putStrLn $ "Lower bound: " ++ concatMap show lower
     putStrLn $ "Simplified lower bound: " ++ concatMap show simpleLower
     putStrLn $ "Upper bound: " ++ concatMap show upper
-    print (length $ generate simpleLower upper)
+    print (length $ generate puzzle1Criteria simpleLower upper)
+    print (length $ generate puzzle2Criteria simpleLower upper)
