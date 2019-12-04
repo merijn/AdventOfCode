@@ -35,3 +35,8 @@ executable Day3
   build-depends:        containers ^>= 0.6.2.1,
                         megaparsec ^>= 8.0.0,
                         mtl ^>= 2.2.2
+
+executable Day4
+  import:               all
+  main-is:              Day4.hs
+  build-depends:        
