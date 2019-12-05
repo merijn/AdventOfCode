@@ -30,8 +30,8 @@ toOpcodes = fmap V.fromList . mapM toDecimal . T.split (==',') . T.stripEnd
 runIntcode :: Vector Int -> Int -> Int -> Either String Int
 runIntcode frozenIntcodes noun verb = runST $ do
     intcodes <- V.thaw frozenIntcodes
-    V.write intcodes 1 12
-    V.write intcodes 2 2
+    V.write intcodes 1 noun
+    V.write intcodes 2 verb
     stepComputer 0 intcodes
   where
     stepComputer
