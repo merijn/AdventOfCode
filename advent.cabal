@@ -40,3 +40,9 @@ executable Day4
   import:               all
   main-is:              Day4.hs
   build-depends:        containers ^>= 0.6.2.1
+
+executable Day5
+  import:               all
+  main-is:              Day5.hs
+  build-depends:        transformers ^>= 0.5.6.2,
+                        vector ^>= 0.12.0.3
