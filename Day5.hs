@@ -63,6 +63,10 @@ data OpCode
     | Mul Param Param Int
     | ReadIn Int
     | WriteOut Param
+    | Jnz Param Param
+    | Jez Param Param
+    | Lt Param Param Int
+    | Eq Param Param Int
     | Halt
     deriving (Eq, Show)
 
@@ -74,6 +78,10 @@ decodeOpcode addr = do
         2 -> Mul <$> param modes 1 <*> param modes 2 <*> outputParam modes 3
         3 -> ReadIn <$> outputParam modes 1
         4 -> WriteOut <$> param modes 1
+        5 -> Jnz <$> param modes 1 <*> param modes 2
+        6 -> Jez <$> param modes 1 <*> param modes 2
+        7 -> Lt <$> param modes 1 <*> param modes 2 <*> outputParam modes 3
+        8 -> Eq <$> param modes 1 <*> param modes 2 <*> outputParam modes 3
         99 -> return Halt
         i -> errorMsg $ "Unknown opcode: " ++ show i
   where
@@ -121,12 +129,36 @@ interpreter = stepComputer 0
                 stepComputer (n + 4)
 
             ReadIn out -> do
-                liftIO readLn >>= writeOffset out
+                liftIO readInt >>= writeOffset out
                 stepComputer (n + 2)
 
             WriteOut param -> do
                 readParam param >>= liftIO . print
                 stepComputer (n + 2)
+
+            Jnz cond target -> do
+                val <- readParam cond
+                offset <- readParam target
+                if val /= 0
+                   then stepComputer offset
+                   else stepComputer (n + 3)
+
+            Jez cond target -> do
+                val <- readParam cond
+                offset <- readParam target
+                if val == 0
+                   then stepComputer offset
+                   else stepComputer (n + 3)
+
+            Lt p1 p2 target -> do
+                cond <- (<) <$> readParam p1 <*> readParam p2
+                writeOffset target (if cond then 1 else 0)
+                stepComputer (n + 4)
+
+            Eq p1 p2 target -> do
+                cond <- (==) <$> readParam p1 <*> readParam p2
+                writeOffset target (if cond then 1 else 0)
+                stepComputer (n + 4)
 
             Halt -> return ()
 
