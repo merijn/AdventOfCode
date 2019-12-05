@@ -8,19 +8,21 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Text.Read as T
-import Data.Vector.Unboxed (Vector, (//))
+import Data.Vector.Unboxed (Vector)
 import qualified Data.Vector.Unboxed as V
 import Data.Vector.Unboxed.Mutable (IOVector)
 import qualified Data.Vector.Unboxed.Mutable as V
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
+import System.IO (hFlush, stdout)
+import Text.Read (readMaybe)
 
 toOpcodes :: Text -> Either String (Vector Int)
 toOpcodes = fmap V.fromList . mapM toDecimal . T.split (==',') . T.stripEnd
   where
     toDecimal :: Text -> Either String Int
-    toDecimal txt = case T.decimal txt of
-        Left t -> Left t
+    toDecimal txt = case T.signed T.decimal txt of
+        Left t -> Left $ T.unpack txt ++ ": " ++ t
         Right (t, remainder)
             | T.null remainder -> Right t
             | otherwise -> Left "Parse error!"
@@ -59,6 +61,8 @@ readParam (Indirect i) = readOffset i
 data OpCode
     = Add Param Param Int
     | Mul Param Param Int
+    | ReadIn Int
+    | WriteOut Param
     | Halt
     deriving (Eq, Show)
 
@@ -68,6 +72,8 @@ decodeOpcode addr = do
     case opcode of
         1 -> Add <$> param modes 1 <*> param modes 2 <*> outputParam modes 3
         2 -> Mul <$> param modes 1 <*> param modes 2 <*> outputParam modes 3
+        3 -> ReadIn <$> outputParam modes 1
+        4 -> WriteOut <$> param modes 1
         99 -> return Halt
         i -> errorMsg $ "Unknown opcode: " ++ show i
   where
@@ -86,6 +92,17 @@ decodeOpcode addr = do
             Direct _ -> errorMsg "Output param can't be direct."
             Indirect i -> return i
 
+readInt :: IO Int
+readInt = do
+    putStr "Input integer: "
+    hFlush stdout
+    txt <- getLine
+    case readMaybe txt of
+        Just n -> return n
+        Nothing -> do
+            putStrLn "Not a valid integer!"
+            readInt
+
 interpreter :: Interpreter ()
 interpreter = stepComputer 0
   where
@@ -103,7 +120,15 @@ interpreter = stepComputer 0
                 writeOffset out result
                 stepComputer (n + 4)
 
-            Halt -> readOffset 0 >>= liftIO . print
+            ReadIn out -> do
+                liftIO readLn >>= writeOffset out
+                stepComputer (n + 2)
+
+            WriteOut param -> do
+                readParam param >>= liftIO . print
+                stepComputer (n + 2)
+
+            Halt -> return ()
 
 main :: IO ()
 main = do
@@ -114,4 +139,4 @@ main = do
 
     case toOpcodes inputData of
         Left err -> putStrLn err >> exitFailure
-        Right intcodes -> runInterpreter interpreter (intcodes // [(1,12),(2,2)])
+        Right intcodes -> runInterpreter interpreter intcodes
