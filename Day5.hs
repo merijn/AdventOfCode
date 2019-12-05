@@ -7,7 +7,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Text.Read as T
-import Data.Vector.Unboxed (Vector)
+import Data.Vector.Unboxed (Vector, (//))
 import qualified Data.Vector.Unboxed as V
 import Data.Vector.Unboxed.Mutable (IOVector)
 import qualified Data.Vector.Unboxed.Mutable as V
@@ -27,8 +27,6 @@ toOpcodes = fmap V.fromList . mapM toDecimal . T.split (==',') . T.stripEnd
 runIntcode :: Vector Int -> ExceptT String IO ()
 runIntcode frozenIntcodes = do
     intcodes <- V.thaw frozenIntcodes
-    V.write intcodes 1 12
-    V.write intcodes 2 2
     stepComputer 0 intcodes
   where
     stepComputer
@@ -57,7 +55,7 @@ main = do
 
     result <- runExceptT $ do
         intcodes <- except $ toOpcodes inputData
-        runIntcode intcodes
+        runIntcode (intcodes // [(1,12),(2,2)])
 
     case result of
         Left err -> putStrLn err >> exitFailure
