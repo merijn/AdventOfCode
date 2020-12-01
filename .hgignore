@@ -1,0 +1,4 @@
+syntax: rootglob
+dist-newstyle/
+inputs/
+.ghc.environment.*

@@ -1,0 +1,34 @@
+cabal-version:      2.4
+name:               advent
+version:            0.1.0.0
+
+homepage:            
+bug-reports:         
+
+author:             Merijn Verstraaten
+maintainer:         merijn@inconsistent.nl
+copyright:          Copyright © 2020 Merijn Verstraaten
+
+license:            GPL-3.0-only
+license-file:       LICENSE
+
+category:
+build-type:         Simple
+tested-with:        GHC == 8.10
+
+-- synopsis:
+-- description:
+
+extra-source-files:  CHANGELOG.md
+
+common all
+  default-language:     Haskell2010
+  ghc-options:          -Wall
+
+  build-depends:        base ^>= 4.14.0.0
+               ,        containers ^>= 0.6.4.1
+               ,        text ^>= 1.2.3.2
+
+executable Day1
+  import:               all
+  main-is:              Day1.hs
