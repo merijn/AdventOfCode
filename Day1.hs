@@ -13,6 +13,16 @@ import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr)
 
+toValues :: Text -> Either String IntSet
+toValues = getAp . foldMap (Ap . toSingleton) . T.lines
+  where
+    toSingleton :: Text -> Either String IntSet
+    toSingleton txt = case T.decimal txt of
+        Left t -> Left t
+        Right (t, remainder)
+            | T.null remainder -> Right (IS.singleton t)
+            | otherwise -> Left "Parse error!"
+
 solveSum :: Int -> IntSet -> Maybe (Int, Int)
 solveSum target allValues = do
     (minVal, maxValues) <- IS.minView allValues
@@ -42,17 +52,6 @@ solveTriple target = go
         (minVal, remaining) <- IS.minView values
         guard (minVal <= target)
         (rewrap minVal <$> solveSum (target - minVal) values) <|> go remaining
-
-
-toValues :: Text -> Either String IntSet
-toValues = getAp . foldMap (Ap . toSingleton) . T.lines
-  where
-    toSingleton :: Text -> Either String IntSet
-    toSingleton txt = case T.decimal txt of
-        Left t -> Left t
-        Right (t, remainder)
-            | T.null remainder -> Right (IS.singleton t)
-            | otherwise -> Left "Parse error!"
 
 main :: IO ()
 main = do
