@@ -1,5 +1,7 @@
 module Main(main) where
 
+import Control.Applicative ((<|>))
+import Control.Monad (guard)
 import Data.IntSet (IntSet)
 import qualified Data.IntSet as IS
 import Data.Monoid (Ap(Ap,getAp))
@@ -29,6 +31,19 @@ solveSum target allValues = do
 
         | otherwise = Just (low, high)
 
+solveTriple :: Int -> IntSet -> Maybe (Int, Int, Int)
+solveTriple target = go
+  where
+    rewrap :: a -> (b, c) -> (a, b, c)
+    rewrap v (x, y) = (v, x, y)
+
+    go :: IntSet -> Maybe (Int, Int, Int)
+    go values = do
+        (minVal, remaining) <- IS.minView values
+        guard (minVal <= target)
+        (rewrap minVal <$> solveSum (target - minVal) values) <|> go remaining
+
+
 toValues :: Text -> Either String IntSet
 toValues = getAp . foldMap (Ap . toSingleton) . T.lines
   where
@@ -48,4 +63,17 @@ main = do
 
     case toValues inputData of
         Left err -> hPutStrLn stderr err >> exitFailure
-        Right values -> print $ uncurry (*) <$> solveSum 2020 values
+        Right values -> do
+            case solveSum 2020 values of
+                Nothing -> hPutStrLn stderr "No solution!"
+                Just (low, high) -> putStrLn $ mconcat
+                    [ "(", show low, ", ", show high, "):\t"
+                    , show (low * high)
+                    ]
+
+            case solveTriple 2020 values of
+                Nothing -> hPutStrLn stderr "No solution!"
+                Just (x, y, z) -> putStrLn $ mconcat
+                    [ "(", show x, ", ", show y, ", ", show z, "):\t"
+                    , show (x * y * z)
+                    ]
