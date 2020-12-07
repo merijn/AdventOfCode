@@ -50,3 +50,7 @@ executable Day4
 executable Day5
   import:               all
   main-is:              Day5.hs
+
+executable Day6
+  import:               all
+  main-is:              Day6.hs
