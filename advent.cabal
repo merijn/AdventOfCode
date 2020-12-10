@@ -65,3 +65,7 @@ executable Day8
   main-is:              Day8.hs
   build-depends:        megaparsec ^>= 9.0.1
                ,        vector ^>= 0.12.1.2
+
+executable Day9
+  import:               all
+  main-is:              Day9.hs
