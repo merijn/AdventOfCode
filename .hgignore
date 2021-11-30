@@ -1,4 +1,0 @@
-syntax: rootglob
-inputs/
-dist-newstyle/
-.ghc.environment.x86_64-darwin-8.6.5
