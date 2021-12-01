@@ -19,14 +19,18 @@ toValues = traverse toNum . T.lines
             | T.null remainder -> Right i
             | otherwise -> Left "Parse error!"
 
-solve :: Ord a => [a] -> Int
-solve [] = 0
-solve (x:xs) = snd $ foldl' go (x, 0) xs
+countIncrements :: Ord a => [a] -> Int
+countIncrements [] = 0
+countIncrements (x:xs) = snd $ foldl' go (x, 0) xs
   where
     go :: Ord a => (a, Int) -> a -> (a, Int)
     go (v1, n) v2
         | v1 < v2 = (v2, n+1)
         | otherwise = (v2, n)
+
+slidingWindow :: (Ord a, Num a) => [a] -> [a]
+slidingWindow (x1:xs@(x2:x3:_)) = x1 + x2 + x3 : slidingWindow xs
+slidingWindow _ = []
 
 main :: IO ()
 main = do
@@ -35,6 +39,11 @@ main = do
         [inputFile] -> T.readFile inputFile
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    case solve <$> toValues inputData of
+    case toValues inputData of
         Left err -> hPutStrLn stderr err >> exitFailure
-        Right incs -> putStrLn $ show incs ++ " increments"
+        Right values -> do
+            let valueIncrements = countIncrements values
+                windowIncrements = countIncrements $ slidingWindow values
+
+            putStrLn $ show valueIncrements ++ " value increments"
+            putStrLn $ show windowIncrements ++ " window increments"
