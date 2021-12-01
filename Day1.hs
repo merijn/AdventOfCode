@@ -32,6 +32,12 @@ slidingWindow :: (Ord a, Num a) => [a] -> [a]
 slidingWindow (x1:xs@(x2:x3:_)) = x1 + x2 + x3 : slidingWindow xs
 slidingWindow _ = []
 
+zipSlidingWindow :: (Ord a, Num a) => [a] -> [a]
+zipSlidingWindow xs = zipWith3 add3 xs (drop 1 xs) (drop 2 xs)
+  where
+    add3 :: Num a => a -> a -> a -> a
+    add3 x y z = x + y + z
+
 main :: IO ()
 main = do
     args <- getArgs
@@ -44,6 +50,10 @@ main = do
         Right values -> do
             let valueIncrements = countIncrements values
                 windowIncrements = countIncrements $ slidingWindow values
+                windowIncrements2 = countIncrements $ zipSlidingWindow values
 
             putStrLn $ show valueIncrements ++ " value increments"
-            putStrLn $ show windowIncrements ++ " window increments"
+            putStrLn $ mconcat
+                [ show windowIncrements, " (", show windowIncrements2, ") "
+                , " window increments"
+                ]
