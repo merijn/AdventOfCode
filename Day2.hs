@@ -41,6 +41,12 @@ updatePosition (!x, !y) cmd = case cmd of
     Up n -> (x, y - n)
     Down n -> (x, y + n)
 
+updatePositionAimed :: ((Int, Int), Int) -> SubCommand -> ((Int, Int), Int)
+updatePositionAimed (pos@(!x, !y), !aim) cmd = case cmd of
+    Forward n -> ((x + n, y + n * aim), aim)
+    Up n -> (pos, aim - n)
+    Down n -> (pos, aim + n)
+
 main :: IO ()
 main = do
     args <- getArgs
@@ -49,4 +55,7 @@ main = do
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
     let position = foldl' updatePosition (0, 0) inputData
+        (aimedPosition, _) = foldl' updatePositionAimed ((0, 0), 0) inputData
+
     print $ uncurry (*) position
+    print $ uncurry (*) aimedPosition
