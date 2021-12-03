@@ -5,6 +5,8 @@ module Main where
 import Control.Applicative ((<|>))
 import Data.Bifunctor (first)
 import Data.Foldable (foldl')
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text.IO as T
 import Data.Vector.Unboxed (Vector)
@@ -27,11 +29,11 @@ parseFile inputFile parser = do
         Left e -> putStrLn (errorBundlePretty e) >> exitFailure
         Right r -> return r
 
-diagnosticsParser :: Parser [Vector Int]
+diagnosticsParser :: Parser (Set (Vector Int))
 diagnosticsParser = do
     (n, initVec) <- firstVector
     rest <- manyTill (fixedVector n) eof
-    return (initVec:rest)
+    return $ S.fromList (initVec:rest)
   where
     digit :: Parser Int
     digit = (0 <$ char '0') <|> (1 <$ char '1')
@@ -44,17 +46,18 @@ diagnosticsParser = do
     fixedVector :: Int -> Parser (Vector Int)
     fixedVector n = VU.replicateM n digit <* eol
 
-computeGammaEpsilon :: [Vector Int] -> (Int, Int)
-computeGammaEpsilon [] = (0, 0)
-computeGammaEpsilon (v:vs) = (vecToVal (> k), vecToVal (<= k))
+computeGammaEpsilon :: Set (Vector Int) -> (Int, Int)
+computeGammaEpsilon diagnostics = case S.minView diagnostics of
+    Nothing -> (0, 0)
+    Just (v, vs) -> let
+        (k, countVec) = first (`div` 2) $ foldl' updateCount (0, v) vs
+      in (vecToVal (> k) countVec, vecToVal (<= k) countVec)
   where
-    (k, countVec) = first (`div` 2) $ foldl' updateCount (0, v) vs
-
     updateCount :: (Int, Vector Int) -> Vector Int -> (Int, Vector Int)
     updateCount (!n, !sums) vec = (n + 1, VU.zipWith (+) sums vec)
 
-    vecToVal :: (Int -> Bool) -> Int
-    vecToVal p = VU.ifoldl' updateSum 0 $ VU.reverse countVec
+    vecToVal :: (Int -> Bool) -> Vector Int -> Int
+    vecToVal p = VU.ifoldl' updateSum 0 . VU.reverse
       where
         updateSum :: Int -> Int -> Int -> Int
         updateSum val idx x
