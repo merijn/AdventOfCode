@@ -9,7 +9,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text.IO as T
-import Data.Vector.Unboxed (Vector)
+import Data.Vector.Unboxed (Vector, (!))
 import qualified Data.Vector.Unboxed as VU
 import Data.Void (Void)
 import System.Environment (getArgs)
@@ -46,23 +46,52 @@ diagnosticsParser = do
     fixedVector :: Int -> Parser (Vector Int)
     fixedVector n = VU.replicateM n digit <* eol
 
-computeGammaEpsilon :: Set (Vector Int) -> (Int, Int)
-computeGammaEpsilon diagnostics = case S.minView diagnostics of
-    Nothing -> (0, 0)
-    Just (v, vs) -> let
-        (k, countVec) = first (`div` 2) $ foldl' updateCount (0, v) vs
-      in (vecToVal (> k) countVec, vecToVal (<= k) countVec)
+computeParity :: Set (Vector Int) -> (Int, Vector Int)
+computeParity diagnostics = case S.minView diagnostics of
+    Nothing -> (0, VU.empty)
+    Just (v, vs) -> foldl' updateCount (0, v) vs
   where
     updateCount :: (Int, Vector Int) -> Vector Int -> (Int, Vector Int)
     updateCount (!n, !sums) vec = (n + 1, VU.zipWith (+) sums vec)
 
-    vecToVal :: (Int -> Bool) -> Vector Int -> Int
-    vecToVal p = VU.ifoldl' updateSum 0 . VU.reverse
+computeGammaEpsilon :: Set (Vector Int) -> (Int, Int)
+computeGammaEpsilon diagnostics = (vecToVal (> k) vec, vecToVal (<= k) vec)
+  where
+    (k, vec) = first (`div` 2) $ computeParity diagnostics
+
+vecToVal :: (Int -> Bool) -> Vector Int -> Int
+vecToVal p = VU.ifoldl' updateSum 0 . VU.reverse
+  where
+    updateSum :: Int -> Int -> Int -> Int
+    updateSum val idx x
+        | p x = val + 2^idx
+        | otherwise = val
+
+computeOxygenCO2 :: Set (Vector Int) -> (Int, Int)
+computeOxygenCO2 diagnostics = (filterDiagnostics (==), filterDiagnostics (/=))
+  where
+    bitParity :: Set (Vector Int) -> Int -> Int
+    bitParity vecs idx
+        | count >= (S.size vecs + 1) `div` 2 = 1
+        | otherwise = 0
       where
-        updateSum :: Int -> Int -> Int -> Int
-        updateSum val idx x
-            | p x = val + 2^idx
-            | otherwise = val
+        count = foldl' (\n v -> n + (v ! idx)) 0 vecs
+
+    filterDiagnostics :: (Int -> Int -> Bool) -> Int
+    filterDiagnostics cmp = go 0 diagnostics
+      where
+        go :: Int -> Set (Vector Int) -> Int
+        go idx vecs
+            | S.size vecs > 1 = go (idx + 1) (S.filter filterPred vecs)
+            | otherwise = case S.minView vecs of
+                Nothing -> 0
+                Just (v, _) -> vecToVal (==1) v
+          where
+            parity :: Int
+            parity = bitParity vecs idx
+
+            filterPred :: Vector Int -> Bool
+            filterPred vec = vec ! idx `cmp` parity
 
 main :: IO ()
 main = do
@@ -72,8 +101,13 @@ main = do
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
     let (gamma, epsilon) = computeGammaEpsilon inputData
+        (oxygen, co2) = computeOxygenCO2 inputData
+
     putStr $ unlines
         [ "Gamma: " ++ show gamma
         , "Epsilon: " ++ show epsilon
         , "Result: " ++ show (gamma * epsilon)
+        , "Oxygen generator: " ++ show oxygen
+        , "CO2 scrubber: " ++ show co2
+        , "Result: " ++ show (oxygen * co2)
         ]
