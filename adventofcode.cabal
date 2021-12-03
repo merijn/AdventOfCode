@@ -30,3 +30,9 @@ executable Day2
   import:               all
   main-is:              Day2.hs
   build-depends:        megaparsec ^>= 9.2.0
+
+executable Day3
+  import:               all
+  main-is:              Day3.hs
+  build-depends:        megaparsec ^>= 9.2.0
+               ,        vector ^>= 0.12.3.1
