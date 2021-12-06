@@ -1,9 +1,12 @@
 module Main where
 
 import Data.Foldable (foldl')
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IM
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text.IO as T
-import Data.Vector.Unboxed (Vector)
+import Data.Vector.Unboxed (Vector, (!))
 import qualified Data.Vector.Unboxed as VU
 import Data.Void (Void)
 import System.Environment (getArgs)
@@ -24,24 +27,28 @@ parseFile inputFile parser = do
         Left e -> putStrLn (errorBundlePretty e) >> exitFailure
         Right r -> return r
 
+fishDaysToPopVector :: [Int] -> Vector Int
+fishDaysToPopVector fishDays = VU.generate 9 lookupCount
+  where
+    dayCounts :: IntMap Int
+    dayCounts = IM.fromListWith (+) $ map (\k -> (k,1)) fishDays
+
+    lookupCount :: Int -> Int
+    lookupCount n = fromMaybe 0 $ IM.lookup n dayCounts
+
 lanternFishParser :: Parser (Vector Int)
-lanternFishParser = VU.fromList <$> sepBy1 decimal (char ',') <* eol
+lanternFishParser = fishDaysToPopVector <$> sepBy1 decimal (char ',') <* eol
 
 evalPopulation :: Vector Int -> Int -> Vector Int
 evalPopulation v days = foldl' updatePopulation v [1..days]
   where
     updatePopulation :: Vector Int -> a -> Vector Int
-    updatePopulation population _ = newPopulation
+    updatePopulation population _ = VU.generate 9 lookupPop
       where
-        newCount :: Int
-        newCount = VU.length $ VU.elemIndices 0 population
-
-        newPopulation :: Vector Int
-        newPopulation = VU.map updatePop population <> VU.replicate newCount 8
-
-        updatePop :: Int -> Int
-        updatePop 0 = 6
-        updatePop n = n - 1
+        lookupPop :: Int -> Int
+        lookupPop 8 = population ! 0
+        lookupPop 6 = (population ! 0) + (population ! 7)
+        lookupPop n = population ! (n + 1)
 
 main :: IO ()
 main = do
@@ -50,4 +57,5 @@ main = do
         [inputFile] -> parseFile inputFile (lanternFishParser <* eof)
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    print . VU.length $ evalPopulation inputData 80
+    print . VU.sum $ evalPopulation inputData 80
+    print . VU.sum $ evalPopulation inputData 256
