@@ -36,3 +36,9 @@ executable Day3
   main-is:              Day3.hs
   build-depends:        megaparsec ^>= 9.2.0
                ,        vector ^>= 0.12.3.1
+
+executable Day4
+  import:               all
+  main-is:              Day4.hs
+  build-depends:        megaparsec ^>= 9.2.0
+               ,        vector ^>= 0.12.3.1
