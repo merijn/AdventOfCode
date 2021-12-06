@@ -42,21 +42,15 @@ instance Ord Position where
 positionParser :: Parser Position
 positionParser = Pos <$> decimal <* char ',' <*> decimal
 
-lineParser :: Parser (Map Position Int)
-lineParser = do
+lineParser :: (Position -> Position -> [Position]) -> Parser (Map Position Int)
+lineParser computeLine = do
     startPos <- positionParser
     string " -> "
     endPos <- positionParser <* eol
     return . M.fromList . map (\v -> (v,1)) $ computeLine startPos endPos
-  where
-    computeLine :: Position -> Position -> [Position]
-    computeLine (Pos x1 y1) (Pos x2 y2)
-        | x1 == x2 = map (Pos x1) [min y1 y2 .. max y1 y2]
-        | y1 == y2 = map (\x -> Pos x y1) [min x1 x2 .. max x1 x2]
-        | otherwise = []
 
-mapParser :: Parser (Map Position Int)
-mapParser = M.unionsWith (+) <$> many lineParser
+mapParser :: (Position -> Position -> [Position]) -> Parser (Map Position Int)
+mapParser computeLine = M.unionsWith (+) <$> many (lineParser computeLine)
 
 printMap :: Map Position Int -> IO ()
 printMap coords = do
@@ -69,13 +63,36 @@ printMap coords = do
     (Max xMax, Max yMax) =
         foldMap' (\(Pos x y) -> (Max x, Max y)) $ M.keys coords
 
+computeLinePuzzle1 :: Position -> Position -> [Position]
+computeLinePuzzle1 (Pos x1 y1) (Pos x2 y2)
+    | x1 == x2 = map (Pos x1) [min y1 y2 .. max y1 y2]
+    | y1 == y2 = map (\x -> Pos x y1) [min x1 x2 .. max x1 x2]
+    | otherwise = []
+
+computeLinePuzzle2 :: Position -> Position -> [Position]
+computeLinePuzzle2 (Pos x1 y1) (Pos x2 y2)
+    | x1 == x2 = map (Pos x1) yRange
+    | y1 == y2 = map (\x -> Pos x y1) xRange
+    | otherwise = zipWith Pos xRange yRange
+  where
+    xRange | x2 < x1 = [x1, x1 - 1 .. x2 ]
+           | otherwise = [x1 .. x2]
+
+    yRange | y2 < y1 = [y1, y1 - 1 .. y2 ]
+           | otherwise = [y1 .. y2]
+
 main :: IO ()
 main = do
     args <- getArgs
-    inputData <- case args of
-        [inputFile] -> parseFile inputFile (mapParser <* eof)
+    (puzzle1Data, puzzle2Data) <- case args of
+        [inputFile] -> do
+            data1 <- parseFile inputFile (mapParser computeLinePuzzle1 <* eof)
+            data2 <- parseFile inputFile (mapParser computeLinePuzzle2 <* eof)
+            return (data1, data2)
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    let overlappingCount = M.size (M.filter (>=2) inputData)
+    let overlappingCount1 = M.size (M.filter (>=2) puzzle1Data)
+        overlappingCount2 = M.size (M.filter (>=2) puzzle2Data)
 
-    putStrLn $ "Overlap >2: " ++ show overlappingCount
+    putStrLn $ "Overlap >2: " ++ show overlappingCount1
+    putStrLn $ "Overlap >2 (diagonals): " ++ show overlappingCount2
