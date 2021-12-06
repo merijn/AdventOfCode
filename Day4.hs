@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
+import Data.Either (partitionEithers)
 import Data.Foldable (foldl', foldlM)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
@@ -97,8 +98,13 @@ updateBoard v board@Board{boardPositions,columnUnmarked,rowUnmarked} =
                 , rowUnmarked = rowUnmarked // [(rowPos, rowVal - 1)]
                 }
 
-updateBoards :: [BingoBoard] -> Int -> Either Int [BingoBoard]
-updateBoards bs v = traverse (updateBoard v) bs
+firstWinner :: [BingoBoard] -> Int -> Either Int [BingoBoard]
+firstWinner bs v = traverse (updateBoard v) bs
+
+lastWinner :: [BingoBoard] -> Int -> Either Int [BingoBoard]
+lastWinner bs v = case partitionEithers (map (updateBoard v) bs) of
+    ([x], []) -> Left x
+    (_, vs) -> Right vs
 
 main :: IO ()
 main = do
@@ -107,5 +113,5 @@ main = do
         [inputFile] -> parseFile inputFile (problemParser <* eof)
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    print $ foldlM updateBoards boards draws
-    return ()
+    print $ foldlM firstWinner boards draws
+    print $ foldlM lastWinner boards draws
