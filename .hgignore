@@ -1,4 +1,4 @@
 syntax: rootglob
-dist-newstyle/
+**/dist-newstyle/
 inputs/
-.ghc.environment.*
+**/.ghc.environment.*
