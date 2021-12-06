@@ -113,5 +113,10 @@ main = do
         [inputFile] -> parseFile inputFile (problemParser <* eof)
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    print $ foldlM firstWinner boards draws
-    print $ foldlM lastWinner boards draws
+    case foldlM firstWinner boards draws of
+        Left v -> putStrLn $ "Score for first winner: " ++ show v
+        Right _ -> putStrLn "No winners!"
+
+    case foldlM lastWinner boards draws of
+        Left v -> putStrLn $ "Score for last winner: " ++ show v
+        Right _ -> putStrLn "No single last winner!"
