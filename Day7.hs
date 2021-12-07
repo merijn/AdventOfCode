@@ -40,26 +40,26 @@ crabPosToCrabVector crabPos = case IM.lookupMax posCounts of
 crabsParser :: Parser (Vector Int)
 crabsParser = crabPosToCrabVector <$> sepBy1 decimal (char ',') <* eol
 
-computeAlignmentCosts :: (Vector Int -> Int -> Int) -> Vector Int -> Vector Int
-computeAlignmentCosts align vec = VU.generate (VU.length vec) (align vec)
-
-alignPosition1 :: Vector Int -> Int -> Int
-alignPosition1 vec idx = VU.ifoldl' costPerPos 0 vec
+computeAlignmentCosts :: (Int -> Int) -> Vector Int -> Vector Int
+computeAlignmentCosts cost vec = VU.generate (VU.length vec) alignPosition
   where
-    costPerPos :: Int -> Int -> Int -> Int
-    costPerPos acc i v = acc + abs (i - idx) * v
-
-alignPosition2 :: Vector Int -> Int -> Int
-alignPosition2 vec idx = VU.ifoldl' costPerPos 0 vec
-  where
-    costPerPos :: Int -> Int -> Int -> Int
-    costPerPos acc i v = acc + cost * v
+    alignPosition :: Int -> Int
+    alignPosition idx = VU.ifoldl' costPerPos 0 vec
       where
-        offset :: Double
-        offset = fromIntegral $ abs (i - idx)
+        costPerPos :: Int -> Int -> Int -> Int
+        costPerPos acc i v = acc + cost offset * v
+          where
+            offset :: Int
+            offset = abs (i - idx)
 
-        cost :: Int
-        cost = round $ (offset + 1) * (offset/2)
+puzzle1Cost :: Int -> Int
+puzzle1Cost = id
+
+puzzle2Cost :: Int -> Int
+puzzle2Cost n = round $ (offset + 1) * (offset/2)
+  where
+    offset :: Double
+    offset = fromIntegral n
 
 main :: IO ()
 main = do
@@ -68,5 +68,5 @@ main = do
         [inputFile] -> parseFile inputFile (crabsParser <* eof)
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    print . VU.minimum $ computeAlignmentCosts alignPosition1 inputData
-    print . VU.minimum $ computeAlignmentCosts alignPosition2 inputData
+    print . VU.minimum $ computeAlignmentCosts puzzle1Cost inputData
+    print . VU.minimum $ computeAlignmentCosts puzzle2Cost inputData
