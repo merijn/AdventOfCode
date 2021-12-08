@@ -18,6 +18,7 @@ category:           AdventOfCode
 common all
   default-language:     Haskell2010
   ghc-options:          -rtsopts -Wall -fdefer-typed-holes -Wno-unused-do-bind
+                        -Wno-typed-holes
 
   build-depends:        base ^>= 4.14.0.0
                ,        containers ^>= 0.6.4.1
