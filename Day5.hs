@@ -54,8 +54,8 @@ mapParser computeLine = M.unionsWith (+) <$> many (lineParser computeLine)
 
 printMap :: Map Position Int -> IO ()
 printMap coords = do
-    forM [0..xMax] $ \y -> do
-        forM [0..yMax] $ \x -> do
+    forM [0..yMax] $ \y -> do
+        forM [0..xMax] $ \x -> do
             putStr . maybe "." show $ M.lookup (Pos x y) coords
         putStrLn ""
     putStrLn ""
