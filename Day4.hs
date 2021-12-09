@@ -1,6 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
 import Data.Either (partitionEithers)

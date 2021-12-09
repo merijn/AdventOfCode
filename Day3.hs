@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
 import Control.Applicative ((<|>))
