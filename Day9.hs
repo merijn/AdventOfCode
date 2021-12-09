@@ -3,10 +3,12 @@ module Main where
 
 import Control.Monad (forM)
 import Data.Char (digitToInt)
+import Data.Coerce (coerce)
 import Data.Foldable (foldMap')
 import Data.Function ((&))
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Maybe (mapMaybe)
 import Data.Semigroup (Max(..), Min(..))
 import Data.Text (Text)
 import qualified Data.Text.IO as T
@@ -64,22 +66,23 @@ printMap coords = do
     (Max xMax, Max yMax) =
         foldMap' (\(Pos x y) -> (Max x, Max y)) $ M.keys coords
 
-mapConvolution :: Map Position Int -> Map Position Int
-mapConvolution depthMap = M.mapMaybeWithKey computeMinimalDepth depthMap
+findSinks :: Map Position Int -> Map Position Int
+findSinks = coerce $ mapConvolution localMinimum
   where
-    computeMinimalDepth :: Position -> Int -> Maybe Int
-    computeMinimalDepth (Pos x y) v = case minNeighbour of
-        Nothing -> Just v
-        Just (Min d)
-            | d <= v -> Nothing
-            | otherwise -> Just v
-      where
-        minNeighbour = mconcat $ map (`M.lookup` (Min <$> depthMap))
-            [ Pos (x-1) y
-            , Pos (x+1) y
-            , Pos x (y-1)
-            , Pos x (y+1)
-            ]
+    localMinimum :: Min Int -> [Min Int] -> Maybe (Min Int)
+    localMinimum curr vs
+        | mconcat vs <= curr = Nothing
+        | otherwise = Just curr
+
+mapConvolution :: (v -> [v] -> Maybe v) -> Map Position v -> Map Position v
+mapConvolution convolve posMap = M.mapMaybeWithKey updatePosition posMap
+  where
+    updatePosition (Pos x y) v = convolve v $ mapMaybe (`M.lookup` posMap)
+        [ Pos (x-1) y
+        , Pos (x+1) y
+        , Pos x (y-1)
+        , Pos x (y+1)
+        ]
 
 main :: IO ()
 main = do
@@ -88,7 +91,7 @@ main = do
         [inputFile] -> parseFile inputFile (mapParser <* eof)
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    let riskMap = (+1) <$> mapConvolution inputData
+    let riskMap = (+1) <$> findSinks inputData
     printMap inputData
     printMap riskMap
     print $ sum riskMap
