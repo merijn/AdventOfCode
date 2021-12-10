@@ -60,4 +60,4 @@ main = do
         Left err -> hPutStrLn stderr err >> exitFailure
         Right scores -> do
             print $ sum [n | SyntaxError n <- scores]
-            mapM_ print $ findMiddle (sort [n | Incomplete n <- scores])
+            print $ findMiddle (sort [n | Incomplete n <- scores])
