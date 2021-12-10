@@ -1,8 +1,11 @@
 {-# LANGUAGE TupleSections #-}
 module Main where
 
+import Data.List (sort)
+import Data.Foldable (foldl')
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Maybe (listToMaybe)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr)
@@ -13,17 +16,38 @@ openClose = M.fromList $ zip "([{<" ")]}>"
 errorScores :: Map Char Int
 errorScores = M.fromList [(')', 3), (']', 57), ('}', 1197), ('>', 25137)]
 
-parseLine :: [Char] -> Either String Int
+data LineScore = Correct | SyntaxError Int | Incomplete Int
+    deriving (Show)
+
+parseLine :: [Char] -> Either String LineScore
 parseLine = go []
   where
-    go :: [Char] -> [Char] -> Either String Int
-    go _ [] = Right 0
+    scoreIncomplete :: Int -> Char -> Int
+    scoreIncomplete score c = 5 * score + value
+      where
+        value | c == ')' = 1
+              | c == ']' = 2
+              | c == '}' = 3
+              | otherwise = 4
+
+    go :: [Char] -> [Char] -> Either String LineScore
+    go [] [] = Right Correct
+    go remainder [] = Right . Incomplete $ foldl' scoreIncomplete 0 remainder
     go (o:os) (r:rs) | o == r = go os rs
     go stack (r:rs) = case M.lookup r openClose of
         Just c -> go (c:stack) rs
         Nothing -> case M.lookup r errorScores of
-            Just v -> Right v
+            Just v -> Right (SyntaxError v)
             Nothing -> Left $ "Found unknown character: " ++ show r
+
+findMiddle :: [a] -> Maybe a
+findMiddle l = go l l
+  where
+    go :: [a] -> [a] -> Maybe a
+    go xs [] = listToMaybe xs
+    go xs [_] = listToMaybe xs
+    go (_:xs) (_:_:ys) = go xs ys
+    go _ _ = Nothing
 
 main :: IO ()
 main = do
@@ -32,5 +56,8 @@ main = do
         [inputFile] -> lines <$> readFile inputFile
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    print $ sum <$> mapM parseLine inputLines
-    return ()
+    case mapM parseLine inputLines of
+        Left err -> hPutStrLn stderr err >> exitFailure
+        Right scores -> do
+            print $ sum [n | SyntaxError n <- scores]
+            mapM_ print $ findMiddle (sort [n | Incomplete n <- scores])
