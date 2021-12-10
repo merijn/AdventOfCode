@@ -2,7 +2,7 @@
 module Main where
 
 import Data.List (sort)
-import Data.Foldable (foldl')
+import Data.Foldable (foldlM)
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
@@ -16,23 +16,23 @@ openClose = M.fromList $ zip "([{<" ")]}>"
 errorScores :: Map Char Int
 errorScores = M.fromList [(')', 3), (']', 57), ('}', 1197), ('>', 25137)]
 
+completionScores :: Map Char Int
+completionScores = M.fromList [(')', 1), (']', 2), ('}', 3), ('>', 4)]
+
 data LineScore = Correct | SyntaxError Int | Incomplete Int
     deriving (Show)
 
 parseLine :: [Char] -> Either String LineScore
 parseLine = go []
   where
-    scoreIncomplete :: Int -> Char -> Int
-    scoreIncomplete score c = 5 * score + value
-      where
-        value | c == ')' = 1
-              | c == ']' = 2
-              | c == '}' = 3
-              | otherwise = 4
+    scoreIncomplete :: Int -> Char -> Either String Int
+    scoreIncomplete score c = case M.lookup c completionScores of
+        Nothing -> Left $ "Found unknown closing character: " ++ show c
+        Just value -> Right $ score * 5 + value
 
     go :: [Char] -> [Char] -> Either String LineScore
     go [] [] = Right Correct
-    go remainder [] = Right . Incomplete $ foldl' scoreIncomplete 0 remainder
+    go remainder [] = Incomplete <$> foldlM scoreIncomplete 0 remainder
     go (o:os) (r:rs) | o == r = go os rs
     go stack (r:rs) = case M.lookup r openClose of
         Just c -> go (c:stack) rs
