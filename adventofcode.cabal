@@ -75,3 +75,8 @@ executable Day10
   import:               all
   main-is:              Day10.hs
   build-depends:        megaparsec ^>= 9.2.0
+
+executable Day11
+  import:               all
+  main-is:              Day11.hs
+  build-depends:        megaparsec ^>= 9.2.0
