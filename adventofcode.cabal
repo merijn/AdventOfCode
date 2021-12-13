@@ -80,3 +80,8 @@ executable Day11
   import:               all
   main-is:              Day11.hs
   build-depends:        megaparsec ^>= 9.2.0
+
+executable Day13
+  import:               all
+  main-is:              Day13.hs
+  build-depends:        megaparsec ^>= 9.2.0
