@@ -47,10 +47,36 @@ findPaths caveSystem = go caveSystem [] "start"
     go _ path "end" = [reverse ("end":path)]
     go caves path name = case M.lookup name caves of
         Nothing -> []
-        Just foo -> concatMap (go subCaves (name:path)) $ S.toList foo
+        Just dests -> concatMap (go subCaves (name:path)) $ S.toList dests
       where
         subCaves | isSmallCave name = M.delete name caves
                  | otherwise = caves
+
+findPaths2 :: Map Text (Set Text) -> Set [Text]
+findPaths2 caveSystem = S.fromList $ go caveSystem [] False "start"
+  where
+    go :: Map Text (Set Text) -> [Text] -> Bool -> Text -> [[Text]]
+    go _ path _ "end" = [reverse ("end":path)]
+    go caves path noDoubleVisit name
+        | smallCave && inPath && noDoubleVisit = []
+        | otherwise = case M.lookup name caves of
+            Nothing -> []
+            Just dests -> computePaths $ S.toList dests
+      where
+        smallCave = isSmallCave name
+        inPath = name `elem` path
+        newNoDoubleVisit = (smallCave && inPath) || noDoubleVisit
+
+        computePaths = concatMap (go subCaves (name:path) newNoDoubleVisit)
+
+        removeCave
+            | name == "start" || name == "end" = True
+            | smallCave && newNoDoubleVisit = True
+            | otherwise = False
+
+        subCaves | removeCave = M.delete name caves
+                 | otherwise = caves
+
 main :: IO ()
 main = do
     args <- getArgs
@@ -59,3 +85,4 @@ main = do
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
     print $ length (findPaths inputData)
+    print $ S.size (findPaths2 inputData)
