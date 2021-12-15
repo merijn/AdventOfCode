@@ -96,3 +96,8 @@ executable Day14
   main-is:              Day14.hs
   ghc-options:          -O2
   build-depends:        megaparsec ^>= 9.2.0
+
+executable Day15
+  import:               all
+  main-is:              Day15.hs
+  build-depends:        megaparsec ^>= 9.2.0
