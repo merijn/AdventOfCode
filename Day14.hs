@@ -5,7 +5,7 @@
 module Main where
 
 import Control.Monad (replicateM, forM_)
-import Data.Foldable (foldMap')
+import Data.Foldable (foldMap', foldl')
 import Data.Map (Map)
 import qualified Data.Map.Strict as M
 import Data.Monoid (Endo(..))
@@ -77,44 +77,52 @@ polymerInsertion rules n = appEndo $ stimes n (Endo go)
         Just c -> c1:c:go rest
     go l = l
 
-fastInsertionRules
-    :: Map String Char -> Int -> Map String String -> Map String String
-fastInsertionRules baseRules n = fmap insert
+fastScore :: Map String Char -> Int -> String -> Map Char Int
+fastScore rules m = scoreString True finalPairScoring
   where
-    insert :: String -> String
-    insert = polymerInsertion baseRules n
+    finalPairScoring :: Map String (Map Char Int)
+    finalPairScoring = foldl' updateScoring pairScores subExpansions
+      where
+        updateScoring
+            :: Map String (Map Char Int)
+            -> Map String String
+            -> Map String (Map Char Int)
+        updateScoring scores = fmap (scoreString False scores)
 
-applyRules :: forall v . (v -> v -> v) -> v -> Map String v -> String -> v
-applyRules combine def rules = go
+    subExpansions :: [Map String String]
+    subExpansions = expandN partial : replicate (full-1) (expandN baseCount)
+      where
+        (full, partial) = m `quotRem` baseCount
+
+    baseCount :: Int
+    baseCount = 5
+
+    expandN :: Int -> Map String String
+    expandN n = M.mapWithKey (\k _ -> polymerInsertion rules n k) rules
+
+    pairScores :: Map String (Map Char Int)
+    pairScores = M.fromListWith (+) . map (,1) . init <$> expandN baseCount
+
+    scoreString :: Bool -> Map String (Map Char Int) -> String -> Map Char Int
+    scoreString final scores = go
+      where
+        go :: String -> Map Char Int
+        go (c1:rest@(c2:_)) = M.unionWith (+) (score [c1,c2]) (go rest)
+        go [c] | final = M.singleton c 1
+        go _ = M.empty
+
+        score :: String -> Map Char Int
+        score k = M.findWithDefault M.empty k scores
+
+reportResults :: String -> Map String Char -> Int -> IO ()
+reportResults template rules n = do
+    putStrLn template
+    print (nMax - nMin)
+    forM_ (M.assocs counts) $ \(k,v) -> do
+        putStrLn $ show k ++ ": " ++ show v
   where
-    go :: String -> v
-    go (c1:rest@(c2:_)) = case M.lookup [c1,c2] rules of
-        Nothing -> def
-        Just c -> c `combine` go rest
-    go l = case M.lookup l rules of
-        Nothing -> def
-        Just v -> v
-
-tidyRules :: Map String String -> Map String String
-tidyRules rules = M.union singleChars (M.map init rules)
-  where
-    allChars :: String
-    allChars = mconcat $ M.keys rules
-
-    singleChars :: Map String String
-    singleChars = foldMap (\c -> M.singleton [c] [c]) allChars
-
-fastInsert :: Map String String -> String -> String
-fastInsert = applyRules (++) [] . tidyRules
-
-fastCount :: Map String String -> String -> Map Char Int
-fastCount rules = applyRules (M.unionWith (+)) M.empty scoreRules
-  where
-    scoreRules :: Map String (Map Char Int)
-    scoreRules = countMap <$> tidyRules rules
-
-countMap :: String -> Map Char Int
-countMap = M.fromListWith (+) . map (,1)
+    !counts = fastScore rules n template
+    (Min nMin, Max nMax) = foldMap' (\v -> (Min v, Max v)) counts
 
 main :: IO ()
 main = do
@@ -123,12 +131,6 @@ main = do
         [inputFile] -> parseFile inputFile (problemParser <* eof)
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    let basePairs = M.mapWithKey (\k _ -> k) rules
-        !fastRules = fastInsertionRules rules 20 basePairs
-        !counts = fastCount fastRules . fastInsert fastRules $ template
-        (Min nMin, Max nMax) = foldMap' (\v -> (Min v, Max v)) counts
-
-    putStrLn template
-    print (nMax - nMin)
-    forM_ (M.assocs counts) $ \(k,v) -> do
-        putStrLn $ show k ++ ": " ++ show v
+    reportResults template rules 10
+    putStrLn ""
+    reportResults template rules 40
