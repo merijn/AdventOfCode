@@ -8,6 +8,7 @@ import Control.Monad (replicateM, forM_)
 import Data.Foldable (foldMap', foldl')
 import Data.Map (Map)
 import qualified Data.Map.Strict as M
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Endo(..))
 import Data.Semigroup (stimes, Min(..), Max(..))
 import Data.Text (Text)
@@ -77,16 +78,16 @@ polymerInsertion rules n = appEndo $ stimes n (Endo go)
         Just c -> c1:c:go rest
     go l = l
 
-fastScore :: Map String Char -> Int -> String -> Map Char Int
+fastScore :: Map String Char -> Int -> String -> Map Char Integer
 fastScore rules m = scoreString True finalPairScoring
   where
-    finalPairScoring :: Map String (Map Char Int)
+    finalPairScoring :: Map String (Map Char Integer)
     finalPairScoring = foldl' updateScoring pairScores subExpansions
       where
         updateScoring
-            :: Map String (Map Char Int)
+            :: Map String (Map Char Integer)
             -> Map String String
-            -> Map String (Map Char Int)
+            -> Map String (Map Char Integer)
         updateScoring scores = fmap (scoreString False scores)
 
     subExpansions :: [Map String String]
@@ -100,18 +101,19 @@ fastScore rules m = scoreString True finalPairScoring
     expandN :: Int -> Map String String
     expandN n = M.mapWithKey (\k _ -> polymerInsertion rules n k) rules
 
-    pairScores :: Map String (Map Char Int)
+    pairScores :: Map String (Map Char Integer)
     pairScores = M.fromListWith (+) . map (,1) . init <$> expandN baseCount
 
-    scoreString :: Bool -> Map String (Map Char Int) -> String -> Map Char Int
+    scoreString
+        :: Bool -> Map String (Map Char Integer) -> String -> Map Char Integer
     scoreString final scores = go
       where
-        go :: String -> Map Char Int
+        go :: String -> Map Char Integer
         go (c1:rest@(c2:_)) = M.unionWith (+) (score [c1,c2]) (go rest)
         go [c] | final = M.singleton c 1
         go _ = M.empty
 
-        score :: String -> Map Char Int
+        score :: String -> Map Char Integer
         score k = M.findWithDefault M.empty k scores
 
 reportResults :: String -> Map String Char -> Int -> IO ()
@@ -122,7 +124,8 @@ reportResults template rules n = do
         putStrLn $ show k ++ ": " ++ show v
   where
     !counts = fastScore rules n template
-    (Min nMin, Max nMax) = foldMap' (\v -> (Min v, Max v)) counts
+    (Min nMin, Max nMax) = fromMaybe (0,0) $
+        foldMap' (\v -> Just (Min v, Max v)) counts
 
 main :: IO ()
 main = do
