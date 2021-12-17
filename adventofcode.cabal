@@ -101,3 +101,8 @@ executable Day15
   import:               all
   main-is:              Day15.hs
   build-depends:        megaparsec ^>= 9.2.0
+
+executable Day16
+  import:               all
+  main-is:              Day16.hs
+  build-depends:        megaparsec ^>= 9.2.0
