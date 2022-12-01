@@ -256,18 +256,28 @@ packetParser = do
        then LiteralPacket hdr <$> literalPayloadParser
        else OperatorPacket hdr <$> operatorPayloadParser
 
-
 sumVersions :: Packet -> Int
 sumVersions (LiteralPacket Header{..} _) = headerVersion
 sumVersions (OperatorPacket Header{..} ps) =
   headerVersion + sum (map sumVersions ps)
 
+evalPacket :: Packet -> Int64
+evalPacket (LiteralPacket _ v) = v
+evalPacket (OperatorPacket Header{..} ps) = case headerType of
+    0 -> sum subValues
+    1 -> product subValues
+    2 -> minimum subValues
+    3 -> maximum subValues
+  where
+    subValues = map evalPacket ps
+
 main :: IO ()
 main = do
     args <- getArgs
     packet <- case args of
-        [inputFile] -> parseFile inputFile (packetParser <* skipMany zeroP <* eof)
+        [inputFile] -> parseCommandLine inputFile (packetParser <* skipMany zeroP <* eof)
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
     print packet
     print $ sumVersions packet
+    print $ evalPacket packet
