@@ -1,0 +1,29 @@
+cabal-version:      2.4
+name:               adventofcode
+version:            0.1.0.0
+-- synopsis:
+-- description:
+
+homepage:           
+bug-reports:        
+
+author:             Merijn Verstraaten
+maintainer:         merijn@inconsistent.nl
+copyright:          Copyright © 2022 Merijn Verstraaten
+license:            GPL-3.0-only
+license-file:       LICENSE
+
+category:           AdventOfCode
+
+common all
+  default-language:     Haskell2010
+  ghc-options:          -rtsopts -Wall -fdefer-typed-holes -Wno-unused-do-bind
+                        -Wno-typed-holes
+
+  build-depends:        base ^>= 4.16.0.0
+               ,        containers ^>= 0.6.6
+               ,        text ^>= 2.0.1
+
+executable Day1
+  import:               all
+  main-is:              Day1.hs
