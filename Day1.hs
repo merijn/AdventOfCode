@@ -1,5 +1,7 @@
 module Main where
 
+import Data.List (sortOn)
+import Data.Ord (Down(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -37,4 +39,10 @@ main = do
 
     case toValues inputData of
         Left err -> putStrLn $ "Error reading input: " <> err
-        Right v -> print $ maximum (map sum v)
+        Right v -> do
+            let calorieCounts = map sum v
+            putStr $ "Puzzle #1: "
+            print $ maximum calorieCounts
+
+            putStr $ "Puzzle #2: "
+            print . sum . take 3 $ sortOn Down calorieCounts
