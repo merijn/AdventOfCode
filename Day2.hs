@@ -25,6 +25,8 @@ parseFile inputFile parser = do
 
 data RPSMove = Rock | Paper | Scissors deriving (Eq, Show)
 
+data GameResult = Lose | Draw | Win deriving (Eq, Show)
+
 basicMove :: Parser RPSMove
 basicMove = asum
     [ Rock <$ char 'A'
@@ -37,6 +39,16 @@ basicMove = asum
 
 gameParser :: Parser (RPSMove, RPSMove)
 gameParser = (,) <$> basicMove <* char ' ' <*> basicMove <* eol
+
+resultParser :: Parser GameResult
+resultParser = asum
+    [ Lose <$ char 'X'
+    , Draw <$ char 'Y'
+    , Win <$ char 'Z'
+    ]
+
+strategyParser :: Parser (RPSMove, GameResult)
+strategyParser = (,) <$> basicMove <* char ' ' <*> resultParser <* eol
 
 gameResult :: (RPSMove, RPSMove) -> Int
 gameResult game@(opponent, me)
@@ -55,11 +67,38 @@ shapeValue Scissors = 3
 gameValue :: (RPSMove, RPSMove) -> Int
 gameValue game@(_, myShape) = gameResult game + shapeValue myShape
 
+resultValue :: GameResult -> Int
+resultValue result = case result of
+    Lose -> 0
+    Draw -> 3
+    Win -> 6
+
+moveToMake :: (RPSMove, GameResult) -> RPSMove
+moveToMake (opponent, Draw) = opponent
+moveToMake (opponent, Lose) = case opponent of
+    Rock -> Scissors
+    Paper -> Rock
+    Scissors -> Paper
+moveToMake (opponent, Win) = case opponent of
+    Rock -> Paper
+    Paper -> Scissors
+    Scissors -> Rock
+
+strategyValue :: (RPSMove, GameResult) -> Int
+strategyValue strat@(_, result) =
+    shapeValue (moveToMake strat) + resultValue result
+
 main :: IO ()
 main = do
     args <- getArgs
-    inputData <- case args of
-        [inputFile] -> parseFile inputFile (manyTill gameParser eof)
+    (puzzle1, puzzle2) <- case args of
+        [inputFile] -> do
+            puzzle1 <- parseFile inputFile (manyTill gameParser eof)
+            puzzle2 <- parseFile inputFile (manyTill strategyParser eof)
+            return (puzzle1, puzzle2)
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    print . sum $ map gameValue inputData
+    putStr "Puzzle #1: "
+    print . sum $ map gameValue puzzle1
+    putStr "Puzzle #2: "
+    print . sum $ map strategyValue puzzle2
