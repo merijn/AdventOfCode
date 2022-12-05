@@ -33,6 +33,11 @@ executable Day2
   main-is:              Day2.hs
   build-depends:        megaparsec ^>= 9.3.0
 
+executable Day3
+  import:               all
+  main-is:              Day3.hs
+  build-depends:        megaparsec ^>= 9.3.0
+
 executable Day4
   import:               all
   main-is:              Day4.hs
