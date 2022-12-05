@@ -2,6 +2,8 @@
 {-# LANGUAGE RecordWildCards #-}
 module Main where
 
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text.IO as T
 import Data.Void (Void)
@@ -37,6 +39,10 @@ fullyContains (Section l1 h1) (Section l2 h2)
     | l2 <= l1 && h2 >= h1 = True
     | otherwise = False
 
+overlap :: Section -> Section -> Bool
+overlap (Section l1 h1) (Section l2 h2) = not . S.null $
+  S.fromAscList [l1 .. h1] `S.intersection` S.fromAscList [l2 .. h2]
+
 main :: IO ()
 main = do
     args <- getArgs
@@ -46,3 +52,5 @@ main = do
 
     putStrLn "Puzzle #1:"
     print . length $ filter (uncurry fullyContains) inputData
+    putStrLn "Puzzle #2:"
+    print . length $ filter (uncurry overlap) inputData
