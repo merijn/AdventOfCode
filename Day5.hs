@@ -99,8 +99,8 @@ renderCrates boxMap = mapM_ (putStrLn . intercalate " ") $ transpose columns
         renderBox :: Box -> String
         renderBox (Box c) = '[' : c :"]"
 
-makeMove :: Map Int [Box] -> Move -> Map Int [Box]
-makeMove boxMap Move{..} = M.alter insertPrefix destination tmpMap
+genericMove :: ([Box] -> [Box]) -> Map Int [Box] -> Move -> Map Int [Box]
+genericMove f boxMap Move{..} = M.alter insertPrefix destination tmpMap
   where
     stripStart :: Maybe [Box] -> ([Box], Maybe [Box])
     stripStart Nothing = ([], Nothing)
@@ -108,9 +108,15 @@ makeMove boxMap Move{..} = M.alter insertPrefix destination tmpMap
 
     insertPrefix :: Maybe [Box] -> Maybe [Box]
     insertPrefix Nothing = Just prefix
-    insertPrefix (Just bs) = Just (reverse prefix ++ bs)
+    insertPrefix (Just bs) = Just (f prefix ++ bs)
 
     (prefix, tmpMap) = M.alterF stripStart source boxMap
+
+makeMove1 :: Map Int [Box] -> Move -> Map Int [Box]
+makeMove1 = genericMove reverse
+
+makeMove2 :: Map Int [Box] -> Move -> Map Int [Box]
+makeMove2 = genericMove id
 
 topBoxes :: Map Int [Box] -> String
 topBoxes = map unbox . M.elems . M.mapMaybe listToMaybe
@@ -125,8 +131,15 @@ main = do
         [inputFile] -> parseFile inputFile (puzzleParser <* eof)
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-    let movedBoxes = foldl' makeMove boxes moves
+    let puzzle1 = foldl' makeMove1 boxes moves
+        puzzle2 = foldl' makeMove2 boxes moves
 
     renderCrates boxes
-    renderCrates movedBoxes
-    putStrLn $ topBoxes movedBoxes
+    putStrLn ""
+    putStrLn "Puzzle #1:"
+    renderCrates puzzle1
+    putStrLn $ topBoxes puzzle1
+    putStrLn ""
+    putStrLn "Puzzle #2:"
+    renderCrates puzzle2
+    putStrLn $ topBoxes puzzle2
