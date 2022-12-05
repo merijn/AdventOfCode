@@ -1,5 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Data.Foldable (asum)
