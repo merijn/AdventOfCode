@@ -1,6 +1,5 @@
 module Main where
 
-import Control.Monad (forM_)
 import Data.List (transpose)
 import qualified Data.Set as S
 import Data.Text (Text)
@@ -17,7 +16,16 @@ interleaveChunks n input = mconcat . transpose $ map rechunk [0..n-1]
     rechunk k = T.chunksOf n . T.drop k $ input
 
 noDoubles :: Text -> Bool
-noDoubles = (==4) . S.size . T.foldr' S.insert S.empty
+noDoubles txt = (==n) . S.size . T.foldr' S.insert S.empty $ txt
+  where
+    n = T.length txt
+
+reportMarker :: [Text] -> IO ()
+reportMarker chunks = case result of
+    [] -> putStrLn "No marker found!" >> exitFailure
+    ((n,txt):_) -> putStrLn $ "Marker found at: " ++ show (n + T.length txt)
+  where
+    result = dropWhile (not . noDoubles . snd) $ zip [0..] chunks
 
 main :: IO ()
 main = do
@@ -26,12 +34,5 @@ main = do
         [inputFile] -> TIO.readFile inputFile
         _ -> hPutStrLn stderr "No input file!" >> exitFailure
 
-
-    let chunkSize = 4
-        chunks = interleaveChunks chunkSize inputData
-        result = dropWhile (not . noDoubles . snd) $ zip [0..] chunks
-
-    case result of
-        [] -> putStrLn "No marker found!" >> exitFailure
-        ((n,_):_) -> putStrLn $ "Marker found at: " ++ show (n+4)
-
+    reportMarker $ interleaveChunks 4 inputData
+    reportMarker $ interleaveChunks 14 inputData
